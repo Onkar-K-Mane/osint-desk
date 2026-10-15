@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="{{ csrf }}">
+  <meta name="ai-label" content="{{ ai_label }}">
+  <title>{% block title %}{{ app_name }}{% endblock %}</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/css/app.css?v=10">
+  <script src="https://grok.com/grok-app-builder/extensions.js" defer></script>
+</head>
+<body {% block bodyattr %}{% endblock %} class="{{ 'rail-collapsed' if rail_collapsed else '' }}">
+  <a class="skip" href="#main">Skip to content</a>
+  <div class="app">
+    <aside class="rail" id="rail">
+      <div class="rail-top">
+        <a class="wordmark" href="/">OSINT Desk<span>local investigations</span></a>
+        <button type="button" class="icon-btn rail-toggle" id="rail-toggle" aria-label="Collapse navigation" aria-expanded="{{ 'false' if rail_collapsed else 'true' }}" title="Collapse or expand navigation">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6 9 12l6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+      <nav class="nav" aria-label="Primary">
+        <a href="/" class="{{ 'active' if nav == 'investigate' else '' }}" aria-label="Investigate">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="m16 16 5 5"/></svg>
+          <span>Investigate</span>
+        </a>
+        <a href="/history" class="{{ 'active' if nav == 'history' else '' }}" aria-label="History">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 8v5l3 2"/></svg>
+          <span>History</span>
+        </a>
+        <a href="/graph" class="{{ 'active' if nav == 'graph' else '' }}" aria-label="Graph">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="12" r="2.4"/><circle cx="18" cy="6" r="2.4"/><circle cx="18" cy="18" r="2.4"/><path d="M8.2 11.2 15.6 7.2M8.2 12.8 15.6 16.8"/></svg>
+          <span>Graph</span>
+        </a>
+        <a href="/providers" class="{{ 'active' if nav == 'providers' else '' }}" aria-label="Providers">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 3v2.5M12 18.5V21M4.9 6.5l1.8 1.8M17.3 15.7l1.8 1.8M3 12h2.5M18.5 12H21M4.9 17.5l1.8-1.8M17.3 8.3l1.8-1.8"/></svg>
+          <span>Providers</span>
+        </a>
+        <a href="/ai" class="{{ 'active' if nav == 'ai' else '' }}" aria-label="AI">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6L12 3zM18 14l.8 2.2L21 17l-2.2.8L18 20l-.8-2.2L15 17l2.2-.8L18 14z"/></svg>
+          <span>AI</span>
+        </a>
+        <a href="/maintain" class="{{ 'active' if nav == 'maintain' else '' }}" aria-label="Maintain">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 12h8M12 8v8"/></svg>
+          <span>Maintain</span>
+        </a>
+      </nav>
+      <div class="rail-foot">
+        <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">Theme</button>
+        <strong>{{ keys_have }} / {{ keys_need }}</strong> API keys set<br>
+        History stays on this machine. Keys never enter the database.
+        <span class="ai-pill" title="Configured AI backend">{{ ai_label }}</span>
+        <a href="/download.zip">Download for Colab</a>
+      </div>
+    </aside>
+    <main class="stage" id="main">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+  <script src="/static/js/app.js?v=10"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

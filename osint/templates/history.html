@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}History — {{ app_name }}{% endblock %}
+{% block content %}
+  <header class="page-head compact">
+    <h1>History</h1>
+  </header>
+  <form class="search sticky-desk" id="hist-form" method="get" action="/history">
+    <input type="search" id="hist-q" name="q" value="{{ q }}" placeholder="Search — types as you go" aria-label="Search history" autocomplete="off">
+    <select id="hist-type" name="type" class="btn" aria-label="Type">
+      <option value="">All types</option>
+      {% for t in ['ip','domain','url','hash','email'] %}
+        <option value="{{ t }}" {{ 'selected' if ftype == t else '' }}>{{ t }}</option>
+      {% endfor %}
+    </select>
+    <a class="btn" href="/api/export?fmt=csv">CSV</a>
+  </form>
+  <div id="hist-list" class="history-list" {% if not items %}data-empty="1"{% endif %}>
+    {% if not items %}
+      <div class="empty compact"><p>No history yet. Run a lookup.</p></div>
+    {% else %}
+      {% for it in items %}
+        <a class="hist" href="/?prefill={{ it.value | urlencode }}">
+          <span class="t">{{ it.type }}</span>
+          <span class="v">{{ it.value }}</span>
+          <span class="meta">
+            {{ it.lookup_count }} lookup{{ '' if it.lookup_count == 1 else 's' }}
+            · <time datetime="{{ it.last_seen }}" title="{{ it.last_seen | short_dt }}">{{ it.last_seen | short_dt }}</time>
+            {% if it.analyst %} · {{ it.analyst.verdict }}{% endif %}
+          </span>
+        </a>
+      {% endfor %}
+    {% endif %}
+  </div>
+{% endblock %}

@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Investigate — {{ app_name }}{% endblock %}
+{% block bodyattr %}{% if resume_lookup %}data-resume="{{ resume_lookup }}"{% endif %}{% if resume_indicator %}data-indicator-id="{{ resume_indicator.id }}"{% endif %}{% endblock %}
+{% block content %}
+  <header class="page-head compact">
+    <h1>Investigate</h1>
+  </header>
+
+  <form id="investigate-form" class="composer sticky-desk" method="post" action="/api/lookups">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <div class="composer-top">
+      <select id="av-verdict" class="verdict-select" aria-label="Analyst verdict" disabled>
+        <option value="">Verdict</option>
+        <option value="escalated">Escalated</option>
+        <option value="false_positive">False positive</option>
+        <option value="benign">Benign</option>
+        <option value="monitoring">Monitoring</option>
+      </select>
+      <input type="text" id="av-note" placeholder="Note" maxlength="500" disabled>
+    </div>
+    <label class="sr-only" for="ioc">Indicators</label>
+    <textarea id="ioc" name="text" class="ioc-input" rows="1" placeholder="Paste an alert or IOC" {% if resume_indicator %}data-seed="{{ resume_indicator.value }}"{% endif %}></textarea>
+    <div class="composer-actions">
+      <button class="btn btn-primary" type="submit">Run lookup</button>
+      <label class="chk">
+        <input type="checkbox" id="use-ai"> AI extract
+      </label>
+      <span id="extract-hint" class="hint"></span>
+    </div>
+  </form>
+
+  <div class="chips" aria-label="Examples">
+    <button type="button" class="chip js-example" data-value="8.8.8.8">8.8.8.8</button>
+    <button type="button" class="chip js-example" data-value="scanme.nmap.org">scanme.nmap.org</button>
+    <button type="button" class="chip js-example" data-value="44d88612fea8a8f36de82e1278abb02f">EICAR</button>
+    <button type="button" class="chip js-example" data-value="10.0.0.8">10.0.0.8</button>
+    <button type="button" class="chip js-example" data-value="From: bad@evil.example.com&#10;URL: hxxp://malware[.]example[.]com/gate.php&#10;IP: 8.8.8.8&#10;Hash: 44d88612fea8a8f36de82e1278abb02f">Alert blob</button>
+  </div>
+
+  {% if recent %}
+  <div id="recent-chips" class="chips recent-chips" aria-label="Recent indicators">
+    {% for it in recent %}
+      <button type="button" class="chip js-example" data-value="{{ it.value }}">{{ it.type }} · {{ it.value }}</button>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div id="empty-state" class="empty compact">
+    <p>Paste a blob or an IOC. Private addresses never leave this machine.</p>
+  </div>
+
+  <div id="extracted" class="extracted hidden">
+    <div class="extracted-head">
+      <span class="section-label">Extracted</span>
+      <div id="type-bar" class="type-bar" role="tablist" aria-label="Filter by indicator type"></div>
+    </div>
+    <div id="ioc-tray" class="ioc-tray"></div>
+  </div>
+
+  <div id="live" class="hidden">
+    <div class="top-split">
+      <aside id="summary-panel" class="summary-panel hidden"></aside>
+      <aside id="link-only" class="link-rail hidden" aria-label="Query in source"></aside>
+    </div>
+    <div class="sticky-desk sticky-results">
+      <div id="rollup" class="rollup hidden" role="group" aria-label="Outcome filters"></div>
+      <p id="coverage" class="coverage"></p>
+      <p id="quota-line" class="coverage hidden"></p>
+      <div id="toolbar" class="toolbar hidden">
+        <button type="button" class="btn" id="open-graph">Graph</button>
+        <button type="button" class="btn" id="copy-iocs">Copy IOCs</button>
+        <button type="button" class="btn" id="refresh-all">Refresh all</button>
+        <button type="button" class="btn" id="ai-ticket">Ticket</button>
+      </div>
+    </div>
+    <div id="av-history" class="av-history"></div>
+    <aside id="hunt-panel" class="summary-panel hidden"></aside>
+    <div id="ai-out" class="ai-out hidden"></div>
+    <div class="live-main">
+      <div id="case-board"></div>
+      <div id="cards" class="grid hidden"></div>
+      <div id="pivots" class="hidden"></div>
+      <div id="child" class="child-block hidden"></div>
+    </div>
+  </div>
+{% endblock %}

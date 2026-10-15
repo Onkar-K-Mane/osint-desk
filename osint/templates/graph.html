@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Graph — {{ app_name }}{% endblock %}
+{% block content %}
+  <header class="page-head">
+    <div>
+      <h1>Graph</h1>
+      <p>Stored pivot edges around an indicator. Click a node to investigate it.</p>
+    </div>
+  </header>
+  <form class="search" method="get" action="/graph">
+    <input name="type" value="{{ gtype }}" placeholder="type (ip, domain, url, hash, email)" aria-label="Indicator type" style="max-width:180px">
+    <input name="value" value="{{ gvalue }}" placeholder="indicator value" aria-label="Indicator value">
+    <button class="btn btn-primary" type="submit">Show</button>
+  </form>
+  {% if not graph.nodes %}
+    <div class="empty">
+      <h2>No edges yet</h2>
+      <p>Pivots appear after a lookup returns related indicators — hostnames from InternetDB, IPs from DNS, hashes from URLhaus.</p>
+    </div>
+    {% if recent %}
+      <div class="section-label">Recent indicators</div>
+      <div class="chips">
+        {% for it in recent %}
+          <a class="chip" href="/graph?type={{ it.type }}&value={{ it.value | urlencode }}">{{ it.type }} · {{ it.value }}</a>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% else %}
+    <div class="graph-canvas">
+      <script type="application/json" id="graph-data">{{ graph | tojson }}</script>
+      <svg id="graph-svg"></svg>
+    </div>
+  {% endif %}
+{% endblock %}

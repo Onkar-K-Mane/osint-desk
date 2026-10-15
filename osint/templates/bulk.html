@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Bulk — {{ app_name }}{% endblock %}
+{% block content %}
+  <header class="page-head">
+    <div>
+      <h1>Bulk extract</h1>
+      <p>Paste an alert, a log, or a header dump. Regex first; optional AI pass is tagged and re-validated before anything is treated as real.</p>
+    </div>
+  </header>
+  <form id="bulk-form" class="composer sticky-desk">
+    <div class="composer-top">
+      <span class="badge">extract</span>
+      <span class="ai-pill" data-ai-label>{{ ai_label }}</span>
+    </div>
+    <label class="sr-only" for="bulk-text">Raw text</label>
+    <textarea id="bulk-text" class="ioc-input" placeholder="Paste alert text…  Ctrl/⌘+Enter to extract"></textarea>
+    <div class="composer-actions">
+      <button class="btn btn-primary" type="submit">Extract</button>
+      <button class="btn" type="button" id="bulk-ai">Extract with AI <small data-ai-label></small></button>
+    </div>
+  </form>
+  <div id="bulk-list" class="bulk-list"></div>
+  <div class="composer-actions">
+    <button class="btn btn-primary hidden" type="button" id="bulk-run">Investigate selected</button>
+  </div>
+  <div id="bulk-live" class="hidden">
+    <div class="sticky-desk sticky-results">
+      <div id="bulk-rollup" class="rollup" role="status"></div>
+      <p id="bulk-quota" class="coverage hidden"></p>
+      <div class="toolbar">
+        <button type="button" class="btn btn-primary" id="bulk-copy">Copy combined summary</button>
+        <select id="bulk-tlp" class="btn" aria-label="TLP marking">
+          <option value="CLEAR">TLP:CLEAR</option>
+          <option value="GREEN">TLP:GREEN</option>
+          <option value="AMBER">TLP:AMBER</option>
+          <option value="RED">TLP:RED</option>
+        </select>
+      </div>
+    </div>
+    <div id="bulk-sections"></div>
+  </div>
+{% endblock %}

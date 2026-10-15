@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}AI — {{ app_name }}{% endblock %}
+{% block content %}
+  <header class="page-head">
+    <div>
+      <h1>AI</h1>
+      <p>Used when you flip a source card or the summary. The key stays in the local secrets file and is never shown again.</p>
+    </div>
+  </header>
+  <form id="ai-form" class="card ai-form">
+    <label class="field">
+      <span>API base URL</span>
+      <input id="ai-base" type="url" value="{{ ai.base_url }}" autocomplete="off" spellcheck="false" required>
+    </label>
+    <label class="field">
+      <span>Model</span>
+      <input id="ai-model" list="ai-models" value="{{ ai.model }}" autocomplete="off" required>
+      <datalist id="ai-models">
+        <option value="llama3.1"></option>
+        <option value="llama3.2"></option>
+        <option value="qwen2.5"></option>
+        <option value="gpt-4o-mini"></option>
+        <option value="grok-3"></option>
+      </datalist>
+    </label>
+    <label class="field">
+      <span>API key {% if ai.has_key %}· configured{% else %}· not set{% endif %}</span>
+      <input id="ai-key" type="password" autocomplete="off" placeholder="Leave blank to keep the current key">
+    </label>
+    <div class="composer-actions">
+      <label class="chk">
+        <input type="checkbox" id="ai-clear-key"> Clear saved key
+      </label>
+    </div>
+    <div class="key-row">
+      <label class="field grow">
+        <span>Temperature</span>
+        <input id="ai-temp" type="number" min="0" max="2" step="0.1" value="{{ ai.temperature }}">
+      </label>
+      <label class="field grow">
+        <span>Max tokens</span>
+        <input id="ai-tokens" type="number" min="64" max="4000" step="1" value="{{ ai.max_tokens }}">
+      </label>
+    </div>
+    <label class="field">
+      <span>System prompt</span>
+      <textarea id="ai-prompt" rows="8">{{ ai.system_prompt }}</textarea>
+    </label>
+    <p class="tos">This prompt is sent with every flipped card and with the summary. It is not used for IOC extraction.</p>
+    <div class="composer-actions">
+      <button class="btn btn-primary" type="submit">Save</button>
+      <button class="btn" type="button" id="ai-test">Test connection</button>
+      <button class="btn" type="button" id="ai-reset-prompt">Reset prompt</button>
+    </div>
+    <pre id="ai-out" class="summary-pre hidden"></pre>
+  </form>
+  <script type="application/json" id="ai-default-prompt">{{ ai.default_prompt | tojson }}</script>
+{% endblock %}

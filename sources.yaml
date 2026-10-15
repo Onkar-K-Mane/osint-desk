@@ -1,0 +1,441 @@
+# OSINT Desk provider registry. Adding a source: one entry here + one small module
+# (link-only sources need only this file). Keys never appear in this file.
+
+- id: abuseipdb
+  name: AbuseIPDB
+  types: [ip]
+  mode: api
+  key_env: ABUSEIPDB_API_KEY
+  limits: { per_day: 1000 }
+  auto_query: true
+  reserve_fraction: 0.10
+  tier: reputation
+  ttl: { default: 1h, not_found: 1h }
+  deeplink:
+    ip: "https://www.abuseipdb.com/check/{value}"
+  verdict:
+    style: reputation
+    malicious_at: 75
+    suspicious_at: 25
+  tos_note: "Free plan; personal use"
+
+- id: virustotal
+  name: VirusTotal
+  types: [ip, domain, url, hash]
+  mode: api
+  key_env: VT_API_KEY
+  limits: { per_minute: 4, per_day: 500 }
+  auto_query: true
+  reserve_fraction: 0.10
+  tier: reputation
+  ttl: { default: 1h, not_found: 1h, malicious: 24h }
+  deeplink:
+    ip: "https://www.virustotal.com/gui/ip-address/{value}"
+    domain: "https://www.virustotal.com/gui/domain/{value}"
+    hash: "https://www.virustotal.com/gui/file/{value}"
+    url: "https://www.virustotal.com/gui/url/{url_sha256}"
+  verdict:
+    style: reputation
+    malicious_at: 5
+    suspicious_at: 1
+  tos_note: "Public API: non-commercial use only. 4 requests/min on the free key."
+
+- id: urlhaus
+  name: URLhaus
+  types: [url, domain, ip, hash]
+  mode: api
+  key_env: URLHAUS_API_KEY
+  auto_query: true
+  tier: reputation
+  ttl: { default: 1h, not_found: 1h }
+  deeplink:
+    url: "https://urlhaus.abuse.ch/browse.php?search={value_urlenc}"
+    domain: "https://urlhaus.abuse.ch/browse.php?search={value}"
+    ip: "https://urlhaus.abuse.ch/browse.php?search={value}"
+    hash: "https://urlhaus.abuse.ch/browse.php?search={value}"
+  verdict:
+    style: reputation
+    malicious_at: 1
+    suspicious_at: 1
+  tos_note: "abuse.ch. Free query API; Auth-Key required (free to register). No file uploads."
+
+- id: malwarebazaar
+  name: MalwareBazaar
+  types: [hash]
+  mode: api
+  key_env: MALWAREBAZAAR_API_KEY
+  auto_query: true
+  tier: reputation
+  ttl: { default: 1h, not_found: 1h }
+  deeplink:
+    hash: "https://bazaar.abuse.ch/sample/{value}/"
+  verdict:
+    style: reputation
+    malicious_at: 1
+    suspicious_at: 1
+  tos_note: "abuse.ch. Free query API; Auth-Key required (free to register)."
+
+- id: threatfox
+  name: ThreatFox
+  types: [hash, ip, domain, url]
+  mode: api
+  key_env: THREATFOX_API_KEY
+  auto_query: true
+  tier: reputation
+  ttl: { default: 1h, not_found: 1h }
+  deeplink:
+    hash: "https://threatfox.abuse.ch/browse.php?search=ioc:{value}"
+    ip: "https://threatfox.abuse.ch/browse.php?search=ioc:{value}"
+    domain: "https://threatfox.abuse.ch/browse.php?search=ioc:{value}"
+    url: "https://threatfox.abuse.ch/browse.php?search=ioc:{value_urlenc}"
+  verdict:
+    style: reputation
+    malicious_at: 1
+    suspicious_at: 1
+  tos_note: "abuse.ch. Free query API; Auth-Key required (free to register)."
+
+- id: otx
+  name: AlienVault OTX
+  types: [ip, domain, hash, url]
+  mode: api
+  key_env: OTX_API_KEY
+  limits: { per_hour: 100 }
+  auto_query: true
+  tier: reputation
+  ttl: { default: 1h, not_found: 1h }
+  deeplink:
+    ip: "https://otx.alienvault.com/indicator/ip/{value}"
+    domain: "https://otx.alienvault.com/indicator/domain/{value}"
+    hash: "https://otx.alienvault.com/indicator/file/{value}"
+    url: "https://otx.alienvault.com/indicator/url/{value_urlenc}"
+  verdict:
+    style: reputation
+    malicious_at: 1
+    suspicious_at: 1
+  tos_note: "Free pulse API with a key."
+
+- id: greynoise_community
+  name: GreyNoise Community
+  types: [ip]
+  mode: api
+  key_env: GREYNOISE_API_KEY
+  limits: { per_week: 50 }
+  auto_query: false
+  reserve_fraction: 0.10
+  tier: reputation
+  ttl: { default: 1h, not_found: 1h }
+  deeplink:
+    ip: "https://viz.greynoise.io/ip/{value}"
+  verdict:
+    style: classification
+  tos_note: "Community quota is tiny. On-demand only."
+
+- id: ipqualityscore
+  name: IPQualityScore
+  types: [ip, url, email]
+  mode: api
+  key_env: IPQS_API_KEY
+  limits: { per_day: 200 }
+  auto_query: true
+  reserve_fraction: 0.10
+  tier: reputation
+  ttl: { default: 1h, not_found: 1h }
+  deeplink:
+    ip: "https://www.ipqualityscore.com/free-ip-lookup-proxy-vpn-test/lookup/{value}"
+    url: "https://www.ipqualityscore.com/threat-feeds/malicious-url-scanner"
+    email: "https://www.ipqualityscore.com/free-email-verification-api"
+  verdict:
+    style: reputation
+    malicious_at: 85
+    suspicious_at: 75
+  tos_note: "Free key with daily cap. Fraud / proxy / email scoring."
+
+- id: apivoid
+  name: APIVoid
+  types: [ip, domain, url]
+  mode: api
+  key_env: APIVOID_API_KEY
+  limits: { per_day: 25 }
+  auto_query: false
+  reserve_fraction: 0.0
+  tier: reputation
+  ttl: { default: 1h, not_found: 1h }
+  deeplink:
+    ip: "https://www.apivoid.com/tools/ip-reputation/"
+    domain: "https://www.apivoid.com/tools/domain-reputation/"
+    url: "https://www.apivoid.com/tools/url-reputation/"
+  verdict:
+    style: reputation
+    malicious_at: 70
+    suspicious_at: 40
+  tos_note: "Opt-in. 25 free credits total, then paid — stays off until you add a key and click Run."
+
+- id: hybrid_analysis
+  name: Hybrid Analysis
+  types: [hash]
+  mode: api
+  key_env: HYBRID_ANALYSIS_API_KEY
+  limits: { per_day: 200 }
+  auto_query: true
+  tier: sandbox
+  ttl: { default: 1h, not_found: 1h }
+  deeplink:
+    hash: "https://www.hybrid-analysis.com/search?query={value}"
+  verdict:
+    style: classification
+  tos_note: "Falcon Sandbox. Hash lookup only — never file uploads."
+
+- id: triage
+  name: Triage
+  types: [hash]
+  mode: api
+  key_env: TRIAGE_API_KEY
+  limits: { per_day: 200 }
+  auto_query: true
+  tier: sandbox
+  ttl: { default: 1h, not_found: 1h }
+  deeplink:
+    hash: "https://tria.ge/s?q={value}"
+  verdict:
+    style: classification
+  tos_note: "Hatching Triage. Hash presence in the public corpus. Key required."
+
+- id: anyrun
+  name: ANY.RUN
+  types: [hash]
+  mode: link_only
+  tier: sandbox
+  deeplink:
+    hash: "https://app.any.run/submissions/#filehash:{value}"
+  tos_note: "No free API. Opens their public report search."
+
+- id: internetdb
+  name: Shodan InternetDB
+  types: [ip]
+  mode: api
+  auto_query: true
+  tier: facts
+  ttl: { default: 12h, not_found: 2h }
+  deeplink:
+    ip: "https://internetdb.shodan.io/{value}"
+  verdict:
+    style: informational
+  tos_note: "Free, no key. Port and hostname hints only — not a reputation verdict."
+
+- id: rdap
+  name: RDAP
+  types: [ip, domain]
+  mode: api
+  auto_query: true
+  tier: facts
+  ttl: { default: 48h, not_found: 6h }
+  deeplink:
+    ip: "https://rdap.org/ip/{value}"
+    domain: "https://rdap.org/domain/{value}"
+  verdict:
+    style: informational
+  tos_note: "Public RDAP. No key."
+
+- id: hunter
+  name: Hunter.io
+  types: [domain, email]
+  mode: api
+  key_env: HUNTER_API_KEY
+  limits: { per_month: 25 }
+  auto_query: true
+  reserve_fraction: 0.10
+  tier: identity
+  ttl: { default: 24h, not_found: 6h }
+  deeplink:
+    domain: "https://hunter.io/search/{value}"
+    email: "https://hunter.io/verify/{value_urlenc}"
+  verdict:
+    style: informational
+  tos_note: "Free tier is tiny. Domain search / email verifier. Facts only, no malware verdict."
+
+- id: dmarc_spf
+  name: DMARC / SPF
+  types: [domain]
+  mode: api
+  auto_query: true
+  tier: identity
+  ttl: { default: 6h, not_found: 1h }
+  deeplink:
+    domain: "https://mxtoolbox.com/dmarc.aspx?domain={value}"
+  verdict:
+    style: informational
+  tos_note: "Published DMARC policy and SPF record via Cloudflare DNS-over-HTTPS. No key."
+
+- id: urlscan_search
+  name: urlscan.io search
+  types: [domain, url, ip, hash]
+  mode: api
+  key_env: URLSCAN_API_KEY
+  limits: { per_day: 100 }
+  auto_query: true
+  tier: facts
+  ttl: { default: 1h, not_found: 1h }
+  deeplink:
+    domain: "https://urlscan.io/search/#domain:{value}"
+    url: "https://urlscan.io/search/#page.url:{value_urlenc}"
+    ip: "https://urlscan.io/search/#page.ip:{value}"
+    hash: "https://urlscan.io/search/#hash:{value}"
+  verdict:
+    style: informational
+  tos_note: "Search only. Submitting a new scan is a separate, explicit action (not auto)."
+
+- id: geoasn
+  name: Geo / ASN
+  types: [ip]
+  mode: api
+  auto_query: true
+  tier: facts
+  ttl: { default: 24h, not_found: 6h }
+  deeplink:
+    ip: "https://ipwho.is/{value}"
+  verdict:
+    style: informational
+  tos_note: "ipwho.is free endpoint. Informational only."
+
+- id: dns
+  name: DNS (Cloudflare DoH)
+  types: [domain]
+  mode: api
+  auto_query: true
+  tier: facts
+  ttl: { default: 6h, not_found: 1h }
+  deeplink:
+    domain: "https://www.whatsmydns.net/#A/{value}"
+  verdict:
+    style: informational
+  tos_note: "Resolved via Cloudflare 1.1.1.1 DNS-over-HTTPS — not against the target's NS from this machine."
+
+- id: crtsh
+  name: crt.sh
+  types: [domain]
+  mode: api
+  auto_query: true
+  tier: facts
+  ttl: { default: 24h, not_found: 2h }
+  timeout_s: 20
+  deeplink:
+    domain: "https://crt.sh/?q={value}"
+  verdict:
+    style: informational
+  tos_note: "Certificate transparency. Public, no key. Can be slow."
+
+- id: hashlookup
+  name: CIRCL hashlookup
+  types: [hash]
+  mode: api
+  auto_query: true
+  tier: facts
+  ttl: { default: 24h, not_found: 2h }
+  deeplink:
+    hash: "https://hashlookup.circl.lu/lookup/sha256/{value}"
+  verdict:
+    style: allowlist
+  tos_note: "Known-benign file corpus. A hit is benign; a miss is unknown, not clean."
+
+- id: popularity
+  name: Popularity allowlist
+  types: [domain]
+  mode: local
+  auto_query: true
+  tier: facts
+  ttl: { default: 168h, not_found: 168h }
+  verdict:
+    style: allowlist
+  tos_note: "Local Tranco-style top-site list. A hit is benign infrastructure, not a malware verdict."
+
+- id: disposable_email
+  name: Disposable email list
+  types: [email]
+  mode: local
+  auto_query: true
+  tier: facts
+  ttl: { default: 168h, not_found: 168h }
+  verdict:
+    style: informational
+  tos_note: "Local list of throwaway mail providers."
+
+- id: hibp
+  name: Have I Been Pwned
+  types: [email]
+  mode: link_only
+  tier: identity
+  deeplink:
+    email: "https://haveibeenpwned.com/account/{value_urlenc}"
+  tos_note: "Email search is paid. Link-only; no scraping."
+
+- id: talos
+  name: Cisco Talos
+  types: [ip, domain]
+  mode: link_only
+  deeplink:
+    ip: "https://talosintelligence.com/reputation_center/lookup?search={value}"
+    domain: "https://talosintelligence.com/reputation_center/lookup?search={value}"
+  tos_note: "No free API. Open in browser."
+
+- id: censys
+  name: Censys
+  types: [ip, domain]
+  mode: link_only
+  deeplink:
+    ip: "https://search.censys.io/hosts/{value}"
+    domain: "https://search.censys.io/domain/{value}"
+  tos_note: "No free API used. Open in browser."
+
+- id: shodan
+  name: Shodan
+  types: [ip]
+  mode: link_only
+  deeplink:
+    ip: "https://www.shodan.io/host/{value}"
+  tos_note: "Full Shodan is paid. InternetDB covers the free view."
+
+- id: xforce
+  name: IBM X-Force
+  types: [ip, domain, hash, url]
+  mode: link_only
+  deeplink:
+    ip: "https://exchange.xforce.ibmcloud.com/ip/{value}"
+    domain: "https://exchange.xforce.ibmcloud.com/url/{value}"
+    hash: "https://exchange.xforce.ibmcloud.com/malware/{value}"
+    url: "https://exchange.xforce.ibmcloud.com/url/{value_urlenc}"
+  tos_note: "Link-only."
+
+- id: spamhaus
+  name: Spamhaus
+  types: [ip, domain]
+  mode: link_only
+  deeplink:
+    ip: "https://check.spamhaus.org/listed/?searchterm={value}"
+    domain: "https://check.spamhaus.org/listed/?searchterm={value}"
+  tos_note: "Link-only. No DNSBL queries from this machine."
+
+- id: mxtoolbox
+  name: MxToolbox
+  types: [domain, email]
+  mode: link_only
+  deeplink:
+    domain: "https://mxtoolbox.com/SuperTool.aspx?action=mx:{value}"
+    email: "https://mxtoolbox.com/SuperTool.aspx?action=mx:{host}"
+  tos_note: "Link-only."
+
+- id: urlvoid
+  name: URLVoid
+  types: [url, domain]
+  mode: link_only
+  deeplink:
+    domain: "https://www.urlvoid.com/scan/{value}/"
+    url: "https://www.urlvoid.com/scan/{host}/"
+  tos_note: "Link-only."
+
+- id: bgp_he
+  name: Hurricane Electric BGP
+  types: [ip]
+  mode: link_only
+  deeplink:
+    ip: "https://bgp.he.net/ip/{value}"
+  tos_note: "Link-only."

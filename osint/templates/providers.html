@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Providers — {{ app_name }}{% endblock %}
+{% block content %}
+  <header class="page-head">
+    <div>
+      <h1>Providers</h1>
+      <p>Keys are written to a local secrets file, never the database, never returned. Free sources only.</p>
+    </div>
+  </header>
+  <div class="prov-grid">
+    {% for c in cards %}
+      <article class="card">
+        <div class="card-head">
+          <h3>{{ c.name }}</h3>
+          <span class="verdict">{{ c.mode }}</span>
+        </div>
+        <p class="summary">{{ c.types | join(", ") }}{% if c.auto_query %} · auto{% else %} · on-demand{% endif %}</p>
+        {% if c.needs_key %}
+          <p class="tos">Key {{ "configured" if c.has_key else "missing" }} ({{ c.key_env }})</p>
+          <div class="key-row">
+            <input type="password" autocomplete="off" data-key-for="{{ c.id }}" placeholder="paste key — never shown again">
+            <button type="button" class="btn js-save-key" data-id="{{ c.id }}">Save</button>
+          </div>
+        {% else %}
+          <p class="tos">No key required.</p>
+        {% endif %}
+        {% if c.quota %}
+          {% for w, q in c.quota.items() %}
+            <div>
+              <p class="tos">{{ w }} {{ q.used }}/{{ q.limit }}</p>
+              <div class="quota" aria-hidden="true"><span style="width: {{ (q.used / q.limit * 100) if q.limit else 0 }}%"></span></div>
+            </div>
+          {% endfor %}
+        {% endif %}
+        {% if c.tos %}
+          <p class="tos">{{ c.tos }}</p>
+        {% endif %}
+      </article>
+    {% endfor %}
+  </div>
+{% endblock %}
