@@ -70,3 +70,17 @@ def test_blob_extract():
 def test_defang_display():
     assert "[.]" in defang("203.0.113.7")
     assert "[@]" in defang("a@b.com")
+
+
+def test_ipv6_not_extracted_from_free_text():
+    # Hard rule 5: no IPv6 extraction from blobs...
+    blob = "Beacon to 2001:db8::1 and 203.0.113.7 observed\nsecond line"
+    values = [i.value for i in extract_indicators(blob)]
+    assert "203.0.113.7" in values
+    assert not any(":" in v for v in values)
+
+
+def test_lone_ipv6_still_looked_up():
+    # ...but a lone pasted IPv6 is still accepted.
+    inds = extract_indicators("2001:db8::1")
+    assert len(inds) == 1 and inds[0].type == IndicatorType.IP
