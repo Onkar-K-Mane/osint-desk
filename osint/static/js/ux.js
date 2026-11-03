@@ -169,13 +169,18 @@
       O.liveDetect();
       $("#investigate-form").requestSubmit();
     } else {
-      location.href = "/?run=1&prefill=" + encodeURIComponent(value);
+      // Same-origin handoff (sessionStorage), never a URL a third-party page could craft.
+      try {
+        sessionStorage.setItem("osint-run", value);
+      } catch (e) {}
+      location.href = "/";
     }
   }
 
-  function paintPalette(entries) {
+  function paintPalette(entries, keepSelection) {
+    const prev = keepSelection && pal.items[pal.sel] ? pal.items[pal.sel].group + "|" + pal.items[pal.sel].label : null;
     pal.items = entries;
-    pal.sel = 0;
+    pal.sel = Math.max(0, prev ? entries.findIndex((e) => e.group + "|" + e.label === prev) : 0);
     pal.list.textContent = "";
     if (!entries.length) {
       pal.list.appendChild(el("li", { class: "cmdk-empty", role: "presentation", text: "No matches" }));
@@ -196,7 +201,7 @@
       li.addEventListener("mousemove", () => select(i, false));
       pal.list.appendChild(li);
     });
-    pal.input.setAttribute("aria-activedescendant", "cmdk-opt-0");
+    select(pal.sel, false);
   }
   function select(i, scroll) {
     if (!pal.items.length) return;
@@ -250,10 +255,12 @@
       /* palette still works offline for pages and actions */
     }
     if (seq !== pal.seq) return;
-    paintPalette(extra.filter((e) => e.group === "Run").concat(cmds, extra.filter((e) => e.group !== "Run")));
+    paintPalette(extra.filter((e) => e.group === "Run").concat(cmds, extra.filter((e) => e.group !== "Run")), true);
   }
 
   function openPalette() {
+    const help = document.getElementById("help-dialog");
+    if (help && help.open) help.close();
     if (!pal.dlg) {
       const d = makeDialog("cmdk", "Command palette");
       const panel = el("div", { class: "dlg-panel" });
@@ -279,6 +286,7 @@
       pal.input.addEventListener("input", () => {
         // Filter pages/actions instantly so Enter never acts on a stale list; only the
         // network lookups (detect + history) are debounced.
+        pal.seq++; // invalidate any in-flight network refresh for the previous text
         paintPalette(localMatches(pal.input.value.trim()));
         clearTimeout(pal.timer);
         pal.timer = setTimeout(refreshPalette, 120);
@@ -512,7 +520,7 @@
       }
       const tag = (document.activeElement && document.activeElement.tagName) || "";
       const typing = tag === "TEXTAREA" || tag === "INPUT" || tag === "SELECT";
-      if (e.key === "?" && !typing && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      if (e.key === "?" && !typing && !e.ctrlKey && !e.metaKey && !e.altKey && !document.querySelector("dialog[open]")) {
         e.preventDefault();
         openHelp();
       }
@@ -529,18 +537,56 @@
     }
   }
 
+  /* ---------- Providers page: text + key-status filter ---------- */
+  function initProviderFilter() {
+    const q = $("#prov-q");
+    if (!q) return;
+    const cards = Array.from(document.querySelectorAll(".prov-grid .card"));
+    const pills = Array.from(document.querySelectorAll("[data-pf]"));
+    let mode = "all";
+    function apply() {
+      const needle = q.value.trim().toLowerCase();
+      let shown = 0;
+      cards.forEach((c) => {
+        const ok = (mode === "all" || c.getAttribute("data-state") === mode) && (!needle || (c.getAttribute("data-search") || "").includes(needle));
+        c.classList.toggle("hidden", !ok);
+        if (ok) shown++;
+      });
+      const count = $("#prov-count");
+      if (count) count.textContent = shown === cards.length ? "" : shown + " of " + cards.length + " shown";
+    }
+    q.addEventListener("input", apply);
+    pills.forEach((b) =>
+      b.addEventListener("click", () => {
+        mode = b.getAttribute("data-pf");
+        pills.forEach((x) => {
+          const on = x === b;
+          x.classList.toggle("on", on);
+          x.setAttribute("aria-pressed", on ? "true" : "false");
+        });
+        apply();
+      })
+    );
+  }
+
   function boot() {
+    initProviderFilter();
     initDensity();
     initKeys();
     initConnection();
     initDraft();
     initReportMenu();
-    // ?run=1&prefill=… from the palette: run the lookup once app.js has bound the form
-    // (its DOMContentLoaded handler runs after this deferred script, so wait for "load").
-    const params = new URLSearchParams(location.search);
-    if (params.get("run") === "1" && params.get("prefill") && $("#investigate-form")) {
+    // A lookup requested from the palette on another page: run it once app.js has bound the
+    // form (its DOMContentLoaded handler runs after this deferred script, so wait for "load").
+    let pending = null;
+    try {
+      pending = sessionStorage.getItem("osint-run");
+      sessionStorage.removeItem("osint-run");
+    } catch (e) {}
+    if (pending && $("#investigate-form") && $("#ioc")) {
       const go = () => {
-        history.replaceState({}, "", "/");
+        $("#ioc").value = pending;
+        O.liveDetect();
         $("#investigate-form").requestSubmit();
       };
       if (document.readyState === "complete") go();

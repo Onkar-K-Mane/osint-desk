@@ -1722,6 +1722,8 @@
 
   function bindKeys() {
     document.addEventListener("keydown", (e) => {
+      // A native <dialog> (palette, help) owns the keyboard: no global shortcuts behind it.
+      if (document.querySelector("dialog[open]")) return;
       const tag = (document.activeElement && document.activeElement.tagName) || "";
       const typing = tag === "TEXTAREA" || tag === "INPUT" || tag === "SELECT";
       if (e.key === "/" && !e.metaKey && !e.ctrlKey && !e.altKey && !typing) {
