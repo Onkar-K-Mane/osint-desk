@@ -21,7 +21,7 @@
       {% for it in items %}
         <a class="hist" href="/?prefill={{ it.value | urlencode }}">
           <span class="t">{{ it.type }}</span>
-          <span class="v">{{ it.value }}</span>
+          <span class="v">{{ it.value | defang }}</span>
           <span class="meta">
             {{ it.lookup_count }} lookup{{ '' if it.lookup_count == 1 else 's' }}
             · <time datetime="{{ it.last_seen }}" title="{{ it.last_seen | short_dt }}">{{ it.last_seen | short_dt }}</time>

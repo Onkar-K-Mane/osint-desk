@@ -11,13 +11,15 @@ ROOT = Path(__file__).resolve().parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from osint.config import DEFAULT_HOST, DEFAULT_PORT, load_secrets, ensure_data_dir
+from osint.config import DEFAULT_PORT, load_secrets, ensure_data_dir
 
 
 def main() -> None:
     ensure_data_dir()
     load_secrets()
-    host = os.environ.get("OSINT_HOST", DEFAULT_HOST)
+    # Colab / preview entry point: bind all interfaces unless OSINT_HOST says otherwise.
+    host = os.environ.get("OSINT_HOST", "0.0.0.0")
+    os.environ.setdefault("OSINT_STRICT_HOSTS", "0")  # preview/Colab proxies use varied Host headers
     port = int(os.environ.get("OSINT_PORT", str(DEFAULT_PORT)))
     import uvicorn
 

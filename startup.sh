@@ -3,6 +3,7 @@ set -eu
 cd /workspace
 export PYTHONPATH=/workspace
 export OSINT_HOST="${OSINT_HOST:-0.0.0.0}"
+export OSINT_STRICT_HOSTS="${OSINT_STRICT_HOSTS:-0}"
 export OSINT_PORT="${OSINT_PORT:-8080}"
 export OSINT_DATA_DIR="${OSINT_DATA_DIR:-/workspace/data/app}"
 if curl -sf -o /dev/null --max-time 2 http://127.0.0.1:8080/healthz || curl -sf -o /dev/null --max-time 2 http://127.0.0.1:8080/; then

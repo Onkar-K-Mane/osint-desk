@@ -7,10 +7,30 @@ def test_bad_host_rejected():
     app = create_app()
     client = TestClient(app, raise_server_exceptions=False)
     r = client.get("/", headers={"Host": "evil.example:8080"})
-    # relaxed mode allows most hosts, but we still set security headers on allowed
-    # Force a clearly empty host
     r2 = client.get("/", headers={"Host": ""})
     assert r2.status_code in (421, 400, 200)
+    assert r.status_code in (421, 200)
+
+
+def test_strict_hosts(monkeypatch):
+    from osint import security
+
+    monkeypatch.setattr(security, "STRICT_HOSTS", True)
+    ok = ["127.0.0.1:8080", "localhost", "[::1]:8080", "a.localhost", "x.trycloudflare.com"]
+    bad = ["evil.example:8080", "127.0.0.1.evil.example", "", "[::2]:8080"]
+    assert all(security.host_allowed(h) for h in ok)
+    assert not any(security.host_allowed(h) for h in bad)
+    client = TestClient(create_app(), raise_server_exceptions=False)
+    assert client.get("/healthz", headers={"Host": "evil.example"}).status_code == 421
+    assert client.get("/healthz", headers={"Host": "localhost:8080"}).status_code == 200
+
+
+def test_relaxed_hosts_opt_out(monkeypatch):
+    from osint import security
+
+    monkeypatch.setattr(security, "STRICT_HOSTS", False)
+    assert security.host_allowed("anything.example")
+    assert not security.host_allowed("")
 
 
 def test_pages_escape_and_render():
@@ -24,7 +44,8 @@ def test_pages_escape_and_render():
     assert 'id="av-verdict"' in r.text
     assert 'id="summary-panel"' in r.text
     assert "full-lookup" not in r.text
-    assert "https://grok.com" in r.headers["Content-Security-Policy"]
+    assert "grok.com" not in r.headers["Content-Security-Policy"]
+    assert "grok.com" not in r.text  # no third-party scripts
 
 
 def test_bulk_redirects_home():
@@ -92,3 +113,22 @@ def test_summary_endpoint_404():
     r = client.get("/api/lookups/does-not-exist/summary")
     assert r.status_code == 200  # empty string is fine
     assert r.text == "" or r.status_code in (200, 404)
+
+
+def test_csp_script_src_is_self_only():
+    client = TestClient(create_app(), raise_server_exceptions=False)
+    csp = client.get("/healthz").headers["content-security-policy"]
+    assert "script-src 'self';" in csp
+    assert "grok.com" not in csp
+
+
+def test_default_host_is_loopback(monkeypatch):
+    import importlib
+
+    import osint.config as config
+
+    monkeypatch.delenv("OSINT_HOST", raising=False)
+    try:
+        assert importlib.reload(config).DEFAULT_HOST == "127.0.0.1"
+    finally:
+        importlib.reload(config)

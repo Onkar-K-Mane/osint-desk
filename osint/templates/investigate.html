@@ -6,30 +6,36 @@
     <h1>Investigate</h1>
   </header>
 
-  <form id="investigate-form" class="composer sticky-desk" method="post" action="/api/lookups">
+  <form id="investigate-form" class="composer" method="post" action="/api/lookups">
     <input type="hidden" name="csrf" value="{{ csrf }}">
-    <div class="composer-top">
-      <select id="av-verdict" class="verdict-select" aria-label="Analyst verdict" disabled>
-        <option value="">Verdict</option>
-        <option value="escalated">Escalated</option>
-        <option value="false_positive">False positive</option>
-        <option value="benign">Benign</option>
-        <option value="monitoring">Monitoring</option>
-      </select>
-      <input type="text" id="av-note" placeholder="Note" maxlength="500" disabled>
+    <div class="composer-head">
+      <label class="section-label" for="ioc">Alert or indicator</label>
+      <div id="detect-chips" class="detect-chips" aria-live="polite"></div>
+      <span id="extract-hint" class="hint"></span>
     </div>
-    <label class="sr-only" for="ioc">Indicators</label>
-    <textarea id="ioc" name="text" class="ioc-input" rows="1" placeholder="Paste an alert or IOC" {% if resume_indicator %}data-seed="{{ resume_indicator.value }}"{% endif %}></textarea>
+    <textarea id="ioc" name="text" class="ioc-input" rows="1" placeholder="Paste an alert, or one IP, domain, URL, hash or email. Defanged input is fine." spellcheck="false" autocomplete="off" {% if resume_indicator %}data-seed="{{ resume_indicator.value }}"{% endif %}></textarea>
     <div class="composer-actions">
-      <button class="btn btn-primary" type="submit">Run lookup</button>
+      <button class="btn btn-primary" type="submit" id="run-btn">Run lookup <kbd aria-hidden="true">Ctrl</kbd><kbd aria-hidden="true">&#8629;</kbd></button>
       <label class="chk">
         <input type="checkbox" id="use-ai"> AI extract
       </label>
-      <span id="extract-hint" class="hint"></span>
+      <button type="button" class="btn btn-ghost" id="clear-ioc" hidden>Clear</button>
     </div>
   </form>
 
-  <div class="chips" aria-label="Examples">
+  <div id="analyst" class="case-strip hidden" role="group" aria-label="Analyst verdict and note">
+    <select id="av-verdict" class="verdict-select" aria-label="Analyst verdict" disabled>
+      <option value="">Verdict</option>
+      <option value="escalated">Escalated</option>
+      <option value="false_positive">False positive</option>
+      <option value="benign">Benign</option>
+      <option value="monitoring">Monitoring</option>
+    </select>
+    <input type="text" id="av-note" placeholder="Note for this indicator" aria-label="Analyst note" maxlength="500" disabled>
+  </div>
+
+  <div class="chips" role="group" aria-label="Examples">
+    <span class="chips-label">Try</span>
     <button type="button" class="chip js-example" data-value="8.8.8.8">8.8.8.8</button>
     <button type="button" class="chip js-example" data-value="scanme.nmap.org">scanme.nmap.org</button>
     <button type="button" class="chip js-example" data-value="44d88612fea8a8f36de82e1278abb02f">EICAR</button>
@@ -38,16 +44,26 @@
   </div>
 
   {% if recent %}
-  <div id="recent-chips" class="chips recent-chips" aria-label="Recent indicators">
+  <div id="recent-chips" class="chips recent-chips" role="group" aria-label="Recent indicators">
+    <span class="chips-label">Recent</span>
     {% for it in recent %}
-      <button type="button" class="chip js-example" data-value="{{ it.value }}">{{ it.type }} · {{ it.value }}</button>
+      <button type="button" class="chip js-example" data-value="{{ it.value }}">{{ it.type }} &middot; {{ it.value | defang }}</button>
     {% endfor %}
   </div>
   {% endif %}
 
-  <div id="empty-state" class="empty compact">
-    <p>Paste a blob or an IOC. Private addresses never leave this machine.</p>
-  </div>
+  <section id="empty-state" class="empty-hero" aria-labelledby="how-h">
+    <h2 id="how-h">One indicator, every source, no blended score</h2>
+    <ol class="steps">
+      <li><strong>Paste</strong>An alert blob or a single IOC. Indicators are extracted and defanged for you.</li>
+      <li><strong>Compare</strong>One card per source, streamed as each answers. Sources are never merged into one number.</li>
+      <li><strong>Decide</strong>A short decision card shows stance, why, and where sources agree. You make the call.</li>
+    </ol>
+    <p class="privacy-note">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+      Private and reserved addresses are blocked locally and never leave this machine.
+    </p>
+  </section>
 
   <div id="extracted" class="extracted hidden">
     <div class="extracted-head">

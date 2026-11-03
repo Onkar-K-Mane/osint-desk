@@ -32,16 +32,24 @@ RELAXED_SUFFIXES = (
 )
 
 
+def _hostname(host: str) -> str:
+    """Lower-cased hostname without port; handles bracketed IPv6 like [::1]:8080."""
+    host = (host or "").strip().lower()
+    if host.startswith("["):
+        end = host.find("]")
+        return host[: end + 1] if end != -1 else host
+    return host.split(":")[0]
+
+
 def host_allowed(host: str) -> bool:
-    host = (host or "").split(":")[0].lower()
-    if host in SAFE_HOSTS:
+    name = _hostname(host)
+    if not name:
+        return False
+    if name in SAFE_HOSTS or name.endswith(".localhost"):
         return True
-    if host.endswith(".localhost"):
+    if name.endswith(RELAXED_SUFFIXES):
         return True
-    if not STRICT_HOSTS:
-        if host:
-            return True
-    return False
+    return not STRICT_HOSTS
 
 
 def origin_ok(request: Request) -> bool:
@@ -95,7 +103,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["Referrer-Policy"] = "no-referrer"
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
-            "script-src 'self' https://grok.com; "
+            "script-src 'self'; "
             "style-src 'self' 'unsafe-inline'; "
             "img-src 'self' data:; "
             "font-src 'self'; "

@@ -7,9 +7,20 @@
       <p>Keys are written to a local secrets file, never the database, never returned. Free sources only.</p>
     </div>
   </header>
+  {% set ns = namespace(needs=0) %}
+  {% for c in cards %}{% if c.needs_key and not c.has_key %}{% set ns.needs = ns.needs + 1 %}{% endif %}{% endfor %}
+  <div class="search prov-filter" role="search">
+    <input type="search" id="prov-q" placeholder="Filter sources by name or type" aria-label="Filter sources" autocomplete="off">
+    <div class="type-bar" role="group" aria-label="Key status">
+      <button type="button" class="type-pill on" data-pf="all" aria-pressed="true">All <span class="n">{{ cards | length }}</span></button>
+      <button type="button" class="type-pill" data-pf="needs" aria-pressed="false">Needs key <span class="n">{{ ns.needs }}</span></button>
+      <button type="button" class="type-pill" data-pf="ready" aria-pressed="false">Ready <span class="n">{{ cards | length - ns.needs }}</span></button>
+    </div>
+    <span id="prov-count" class="hint" aria-live="polite"></span>
+  </div>
   <div class="prov-grid">
     {% for c in cards %}
-      <article class="card">
+      <article class="card" data-state="{{ 'needs' if c.needs_key and not c.has_key else 'ready' }}" data-search="{{ (c.name ~ ' ' ~ (c.types | join(' ')) ~ ' ' ~ c.mode) | lower }}">
         <div class="card-head">
           <h3>{{ c.name }}</h3>
           <span class="verdict">{{ c.mode }}</span>

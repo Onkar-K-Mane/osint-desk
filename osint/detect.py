@@ -20,13 +20,8 @@ _EMAIL_RE = re.compile(
 _IPV4_RE = re.compile(
     r"\b(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\b"
 )
-# IPv6: compressed forms. Keep conservative to avoid eating hashes.
-_IPV6_RE = re.compile(
-    r"\b(?:(?:[A-Fa-f0-9]{1,4}:){2,7}[A-Fa-f0-9]{1,4}"
-    r"|(?:[A-Fa-f0-9]{1,4}:){1,7}:"
-    r"|:(?::[A-Fa-f0-9]{1,4}){1,7}"
-    r"|(?:[A-Fa-f0-9]{1,4}:){1,6}:[A-Fa-f0-9]{1,4})\b"
-)
+# IPv6 is intentionally NOT extracted from free text (hard rule 5). A lone pasted
+# IPv6 is still accepted by the single-IOC fast path via classify_one.
 _SCHEME_RE = re.compile(r"^(https?|ftp|hxxps?)://", re.I)
 # host + path (no scheme): example.com/a or 1.2.3.4/foo
 _HOST_PATH_RE = re.compile(
@@ -244,11 +239,6 @@ def extract_indicators(text: str) -> list[Indicator]:
     for m in _EMAIL_RE.finditer(cleaned):
         ind = classify_one(m.group(1))
         if ind and ind.type == IndicatorType.EMAIL:
-            add(ind, m.start(), m.end())
-
-    for m in _IPV6_RE.finditer(cleaned):
-        ind = classify_one(m.group(0))
-        if ind and ind.type == IndicatorType.IP:
             add(ind, m.start(), m.end())
 
     for m in _IPV4_RE.finditer(cleaned):

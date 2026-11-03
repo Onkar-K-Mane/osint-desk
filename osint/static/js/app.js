@@ -864,10 +864,33 @@
     $("#analyst") && $("#analyst").classList.remove("hidden");
   }
 
+  // Placeholder that reserves a card's space until its source answers (no layout shift).
+  function pendingCard(p) {
+    const card = el("article", { class: "card is-pending", "data-provider": p.id, "data-kind": "pending", "aria-busy": "true" });
+    const face = el("div", { class: "card-face front" });
+    face.appendChild(
+      el("div", { class: "card-head" }, el("h3", { text: p.name || p.id }), el("span", { class: "verdict pending", text: "… Querying" }))
+    );
+    ["w80", "w60", "w40"].forEach((w) => face.appendChild(el("span", { class: "pending-line " + w })));
+    card.appendChild(el("div", { class: "card-inner" }, face));
+    return card;
+  }
+
+  function clearPending(grid, provider) {
+    if (!grid) return;
+    const sel = ".is-pending" + (provider ? '[data-provider="' + provider + '"]' : "");
+    $$(sel, grid).forEach((n) => n.remove());
+  }
+
+  function notifyStream(stateName, lookupId) {
+    document.dispatchEvent(new CustomEvent("osint:stream", { detail: { state: stateName, lookupId: lookupId } }));
+  }
+
   function attachStream(lookupId, mount) {
     const es = new EventSource("/api/lookups/" + lookupId + "/stream");
     const grid = mount || $("#cards");
     state.results[lookupId] = state.results[lookupId] || [];
+    let finished = false;
     es.addEventListener("lookup_started", (ev) => {
       const d = JSON.parse(ev.data);
       const line = $("#ioc-line");
@@ -887,13 +910,20 @@
         grid.innerHTML = "";
         grid.dataset.ready = "1";
       }
+      if (grid && Array.isArray(d.providers)) {
+        d.providers
+          .filter((p) => p.mode !== "link_only" && p.auto_query !== false)
+          .forEach((p) => {
+            if (!grid.querySelector('[data-provider="' + p.id + '"]')) grid.appendChild(pendingCard(p));
+          });
+      }
     });
-    es.addEventListener("provider_result", (ev) => {
-      const d = JSON.parse(ev.data);
-      const list = state.results[lookupId];
+    function onResult(d) {
+      const list = state.results[lookupId] || (state.results[lookupId] = []);
       const idx = list.findIndex((x) => x.provider === d.provider);
       if (idx >= 0) list[idx] = d;
       else list.push(d);
+      if (grid && hiddenCard(d)) clearPending(grid, d.provider);
       if (grid && !hiddenCard(d)) {
         const existing = grid.querySelector('[data-provider="' + d.provider + '"]');
         const node = renderCard(d, lookupId);
@@ -918,7 +948,28 @@
       applyFilters();
       paintBulkRollup();
       refreshQuota();
-    });
+    }
+    es.addEventListener("provider_result", (ev) => onResult(JSON.parse(ev.data)));
+    // Results live in SQLite, so a stream that is gone (restart, buffer freed) can still be painted.
+    async function hydrate() {
+      try {
+        const b = await api("/api/lookups/" + lookupId);
+        (b.results || []).forEach(onResult);
+      } catch (e) {
+        toast("Could not load results: " + e.message);
+      }
+    }
+    es.addEventListener("open", () => notifyStream("open", lookupId));
+    es.onerror = () => {
+      if (finished) return;
+      if (es.readyState === EventSource.CLOSED) {
+        notifyStream("failed", lookupId);
+        clearPending(grid);
+        hydrate();
+      } else {
+        notifyStream("reconnecting", lookupId);
+      }
+    };
     es.addEventListener("summary", (ev) => {
       const s = JSON.parse(ev.data);
       setRollup(s, allResults());
@@ -942,7 +993,13 @@
       childHost.appendChild(childGrid);
       attachStream(d.lookup_id, childGrid);
     });
-    es.addEventListener("done", () => es.close());
+    es.addEventListener("done", () => {
+      finished = true;
+      es.close();
+      clearPending(grid);
+      notifyStream("open", lookupId);
+      if (!(state.results[lookupId] || []).length) hydrate();
+    });
     return es;
   }
 
@@ -1073,10 +1130,23 @@
     state.pasted = text;
     state.typeFilter = "all";
     state.filter = "all";
+    if (state.submitting) return;
+    state.submitting = true;
+    const runBtn = $("#run-btn");
+    if (runBtn) runBtn.classList.add("is-busy");
     const payload = { text: text, trigger: opts.trigger || "manual" };
     if (opts.force_full) payload.force_full = true;
     if ($("#use-ai") && $("#use-ai").checked) payload.use_ai = true;
-    const data = await api("/api/lookups", { method: "POST", json: payload });
+    let data;
+    try {
+      data = await api("/api/lookups", { method: "POST", json: payload });
+    } catch (e) {
+      toast("Lookup failed: " + e.message);
+      return;
+    } finally {
+      state.submitting = false;
+      if (runBtn) runBtn.classList.remove("is-busy");
+    }
     if (!data.lookups || !data.lookups.length) {
       toast("No indicators found");
       return;
@@ -1363,27 +1433,38 @@
   }
 
   let detectTimer;
+  let detectSeq = 0;
+  function paintDetect(indicators) {
+    const box = $("#detect-chips");
+    const hint = $("#extract-hint");
+    if (!box) return;
+    box.innerHTML = "";
+    const counts = {};
+    (indicators || []).forEach((i) => (counts[i.type] = (counts[i.type] || 0) + 1));
+    Object.keys(counts).forEach((t) => {
+      const chip = el("span", { class: "detect-chip" }, document.createTextNode(t));
+      if (counts[t] > 1) chip.appendChild(el("span", { class: "n", text: "×" + counts[t] }));
+      box.appendChild(chip);
+    });
+    if (hint) hint.textContent = (indicators || []).length > 1 ? indicators.length + " indicators will run" : "";
+  }
   function liveDetect() {
     const input = $("#ioc");
     if (!input) return;
     autosizeIoc();
+    const clear = $("#clear-ioc");
+    if (clear) clear.hidden = !input.value;
     clearTimeout(detectTimer);
     detectTimer = setTimeout(async () => {
       const text = input.value;
-      const hint = $("#extract-hint");
-      if (!text.trim()) {
-        if (hint) hint.textContent = "";
-        return;
-      }
+      if (!text.trim()) return paintDetect([]);
+      const seq = ++detectSeq;
       try {
         const data = await api("/api/detect", { method: "POST", json: { text: text } });
-        const n = (data.indicators || []).length;
-        if (hint) {
-          if (!n) hint.textContent = "";
-          else if (n === 1) hint.textContent = data.indicators[0].type;
-          else hint.textContent = n + " indicators";
-        }
-      } catch (e) {}
+        if (seq === detectSeq) paintDetect(data.indicators || []);
+      } catch (e) {
+        if (seq === detectSeq) paintDetect([]);
+      }
     }, 220);
   }
 
@@ -1470,6 +1551,15 @@
     if (btn) {
       btn.addEventListener("click", () => apply(!document.body.classList.contains("rail-collapsed")));
     }
+    // Tablet widths: start collapsed unless the analyst has chosen otherwise.
+    const chosen = /(?:^|; )osint_rail=/.test(document.cookie);
+    if (!chosen && window.innerWidth > 800 && window.innerWidth <= 1024 && !document.body.classList.contains("rail-collapsed")) {
+      document.body.classList.add("rail-collapsed");
+      if (btn) {
+        btn.setAttribute("aria-expanded", "false");
+        btn.setAttribute("aria-label", "Expand navigation");
+      }
+    }
   }
 
   function initAi() {
@@ -1527,16 +1617,24 @@
   }
 
   function initTheme() {
-    const saved = localStorage.getItem("osint-theme") || "dark";
-    document.documentElement.setAttribute("data-theme", saved);
+    const root = document.documentElement;
     const btn = $("#theme-toggle");
+    function paint() {
+      const light = root.getAttribute("data-theme") === "light";
+      if (btn) {
+        btn.setAttribute("aria-label", light ? "Switch to dark theme" : "Switch to light theme");
+        btn.setAttribute("title", light ? "Dark theme" : "Light theme");
+      }
+    }
+    paint();
     if (!btn) return;
-    btn.textContent = saved === "light" ? "Dark theme" : "Light theme";
     btn.addEventListener("click", () => {
-      const next = document.documentElement.getAttribute("data-theme") === "light" ? "dark" : "light";
-      document.documentElement.setAttribute("data-theme", next);
-      localStorage.setItem("osint-theme", next);
-      btn.textContent = next === "light" ? "Dark theme" : "Light theme";
+      const next = root.getAttribute("data-theme") === "light" ? "dark" : "light";
+      root.setAttribute("data-theme", next);
+      try {
+        localStorage.setItem("osint-theme", next);
+      } catch (e) {}
+      paint();
     });
   }
 
@@ -1624,6 +1722,8 @@
 
   function bindKeys() {
     document.addEventListener("keydown", (e) => {
+      // A native <dialog> (palette, help) owns the keyboard: no global shortcuts behind it.
+      if (document.querySelector("dialog[open]")) return;
       const tag = (document.activeElement && document.activeElement.tagName) || "";
       const typing = tag === "TEXTAREA" || tag === "INPUT" || tag === "SELECT";
       if (e.key === "/" && !e.metaKey && !e.ctrlKey && !e.altKey && !typing) {
@@ -1753,6 +1853,9 @@
       );
   }
 
+  // Small, read-mostly surface for ux.js (palette, export, banners).
+  window.OSINT = { state: state, api: api, el: el, toast: toast, defang: defang, badgeKind: badgeKind, BADGE: BADGE, relTime: relTime, writeClip: writeClip, liveDetect: liveDetect };
+
   document.addEventListener("DOMContentLoaded", () => {
     initTheme();
     initRail();
@@ -1769,6 +1872,13 @@
         submitLookup();
       });
       $("#ioc") && $("#ioc").addEventListener("input", liveDetect);
+      $("#clear-ioc") &&
+        $("#clear-ioc").addEventListener("click", () => {
+          const input = $("#ioc");
+          input.value = "";
+          liveDetect();
+          input.focus();
+        });
       $$(".js-example").forEach((b) =>
         b.addEventListener("click", () => {
           const input = $("#ioc");
