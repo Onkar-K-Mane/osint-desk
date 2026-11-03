@@ -24,7 +24,8 @@ def test_pages_escape_and_render():
     assert 'id="av-verdict"' in r.text
     assert 'id="summary-panel"' in r.text
     assert "full-lookup" not in r.text
-    assert "https://grok.com" in r.headers["Content-Security-Policy"]
+    assert "grok.com" not in r.headers["Content-Security-Policy"]
+    assert "grok.com" not in r.text  # no third-party scripts
 
 
 def test_bulk_redirects_home():
@@ -92,3 +93,22 @@ def test_summary_endpoint_404():
     r = client.get("/api/lookups/does-not-exist/summary")
     assert r.status_code == 200  # empty string is fine
     assert r.text == "" or r.status_code in (200, 404)
+
+
+def test_csp_script_src_is_self_only():
+    client = TestClient(create_app(), raise_server_exceptions=False)
+    csp = client.get("/healthz").headers["content-security-policy"]
+    assert "script-src 'self';" in csp
+    assert "grok.com" not in csp
+
+
+def test_default_host_is_loopback(monkeypatch):
+    import importlib
+
+    import osint.config as config
+
+    monkeypatch.delenv("OSINT_HOST", raising=False)
+    try:
+        assert importlib.reload(config).DEFAULT_HOST == "127.0.0.1"
+    finally:
+        importlib.reload(config)
