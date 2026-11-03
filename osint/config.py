@@ -13,8 +13,9 @@ from dotenv import load_dotenv
 APP_NAME = "OSINT Desk"
 APP_VERSION = "0.5.0"
 
-# Preview / Colab must bind all interfaces. Local lab use can set OSINT_HOST=127.0.0.1.
-DEFAULT_HOST = os.environ.get("OSINT_HOST", "0.0.0.0")
+# Loopback by default (single-user desk, hard rule 13). Colab / preview entry points
+# (run.py, startup.sh) opt in to 0.0.0.0 explicitly; or set OSINT_HOST yourself.
+DEFAULT_HOST = os.environ.get("OSINT_HOST", "127.0.0.1")
 DEFAULT_PORT = int(os.environ.get("OSINT_PORT", "8080"))
 
 _ROOT = Path(__file__).resolve().parent.parent
