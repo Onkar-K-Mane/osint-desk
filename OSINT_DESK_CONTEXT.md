@@ -84,6 +84,9 @@ Tests use a temporary `OSINT_DATA_DIR`.
   with command palette, composer with live type chips, empty-state guide, segmented
   outcome filters, skeleton cards, compact density, Report export, connection banner,
   composer drafts, auto-collapsed rail at tablet widths.
+- Review fixes: palette handoff uses sessionStorage (no `?run=1` GET auto-run); global
+  shortcuts are inert while a dialog is open; stream endpoint never waits forever on an
+  orphaned lookup; palette ignores stale async results. Providers page has a filter.
 - Fixed: phone layout (bottom nav covered the page), History/recent values were not
   defanged, finished lookups could not be reopened after a restart, no theme flash.
 

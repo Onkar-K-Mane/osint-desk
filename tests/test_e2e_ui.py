@@ -188,3 +188,36 @@ def test_phone_layout_keeps_content_visible(browser, server):
     assert pg.is_visible("#ioc")
     assert pg.evaluate("document.documentElement.scrollWidth <= document.documentElement.clientWidth")
     ctx.close()
+
+
+def test_get_link_cannot_start_a_lookup(page, server):
+    """A crafted URL must only prefill; running a lookup needs a user action (hard rule 12 intent)."""
+    page.goto(server.base + "/?run=1&prefill=" + IP)
+    page.wait_for_timeout(1500)
+    assert page.input_value("#ioc") == IP
+    assert page.locator(".card[data-provider]").count() == 0
+    assert "/lookup/" not in page.url
+
+
+def test_global_shortcuts_are_inert_while_a_dialog_is_open(page, server):
+    page.goto(server.base + "/")
+    page.keyboard.press("?")
+    assert page.locator("dialog#help-dialog[open]").count() == 1
+    before = page.evaluate("document.body.classList.contains('rail-collapsed')")
+    page.keyboard.press("[")
+    assert page.evaluate("document.body.classList.contains('rail-collapsed')") == before
+    page.keyboard.press("?")  # must not rebuild the dialog and drop focus
+    assert page.evaluate("document.activeElement.tagName") != "BODY"
+    assert page.locator("dialog#help-dialog[open]").count() == 1
+
+
+def test_providers_filter(page, server):
+    page.goto(server.base + "/providers")
+    total = page.locator(".prov-grid .card").count()
+    page.fill("#prov-q", "virustotal")
+    assert 0 < page.locator(".prov-grid .card:not(.hidden)").count() < total
+    page.fill("#prov-q", "")
+    page.click("[data-pf=needs]")
+    visible = page.locator(".prov-grid .card:not(.hidden)")
+    assert all(s == "needs" for s in [visible.nth(i).get_attribute("data-state") for i in range(visible.count())])
+    assert page.get_attribute("[data-pf=needs]", "aria-pressed") == "true"

@@ -1441,3 +1441,7 @@ dialog.dlg::backdrop { background: var(--scrim); backdrop-filter: blur(2px); }
 }
 .hist { transition: box-shadow var(--motion-quick) var(--ease-out), background-color var(--motion-quick) var(--ease-out); }
 .hist:hover { background: var(--bg-subtle); }
+
+/* ---- Providers filter ---- */
+.prov-filter { flex-wrap: wrap; align-items: center; gap: var(--space-3); }
+.prov-filter input { min-width: 220px; }
