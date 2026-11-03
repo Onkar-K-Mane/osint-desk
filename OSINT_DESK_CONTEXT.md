@@ -22,7 +22,7 @@ step, no frontend framework, no accounts, no Redis.
 | AI | `osint/ai.py` (chat, extract, assess, ticket, explain) |
 | Storage | `osint/db.py`; secrets in `secrets.env` |
 | Security | `osint/security.py` (Host/Origin checks, CSRF, headers, CSP) |
-| UI | `osint/templates/`, `osint/static/js/app.js`, `osint/static/css/app.css` |
+| UI | `osint/templates/`, `osint/static/js/app.js` (investigate/stream/cards), `osint/static/js/ux.js` (palette, help, density, report export, connection banner, drafts), `osint/static/js/boot.js` (theme/density before paint), `osint/static/css/app.css` |
 
 ## Sources
 32 entries in `sources.yaml`: 20 `api`, 2 `local`, 10 `link_only`. Adding an API source =
@@ -44,6 +44,31 @@ headers on all `/api/` writes; not for the public internet without access contro
 - CSP: `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; ...`.
   No third-party scripts are loaded.
 
+## UI architecture notes
+- `app.js` owns state and rendering and exposes a small `window.OSINT` surface
+  (`state`, `api`, `el`, `toast`, `defang`, `badgeKind`, `BADGE`, `relTime`, `writeClip`,
+  `liveDetect`). `ux.js` builds on that surface only. Both use `textContent` for all
+  provider strings.
+- `boot.js` is the only script in `<head>` (no inline scripts: CSP is `script-src 'self'`).
+- Source cards: `lookup_started` carries the planned providers; `app.js` renders
+  `.card.is-pending` placeholders (API/local, auto-query only; link-only are never
+  placeholders) that are replaced in place by the real card, or removed when the source is
+  hidden/skipped or the stream ends. No layout shift.
+- Stream reliability: `es.onerror` dispatches `osint:stream` (banner in `ux.js`). If the
+  stream closes, or `done` arrives with no results, `app.js` repaints from
+  `GET /api/lookups/{id}`. Server side, `/api/lookups/{id}/stream` answers `done`
+  immediately for lookups that finished (or went stale) but are not in the bus.
+- Templates must display indicator values through the `defang` Jinja filter (same output
+  as `defang()` in `app.js`); report exports defang every string.
+- Density is `html[data-density="compact"]`; theme is `html[data-theme]`; both are plain
+  CSS variable overrides.
+- Dialogs use native `<dialog>` (focus trap, Esc, inert page).
+
+## Tests
+`pytest -q` runs unit tests, UI contract tests (`tests/test_ui.py`) and, when Playwright and
+Chromium are installed, browser tests (`tests/test_e2e_ui.py`, offline, reserved-IP lookups).
+Tests use a temporary `OSINT_DATA_DIR`.
+
 ## Changelog of notable fixes (this branch)
 - IPv6 free-text extraction removed (was violating hard rule 5); tests added.
 - CSP no longer allows `https://grok.com`; the `grok.com` script tag was removed from
@@ -54,8 +79,14 @@ headers on all `/api/` writes; not for the public internet without access contro
   late subscribers to a freed lookup get an immediate `done` and load results over HTTP.
 - Removed unused duplicate `verdict.rollup_from_results`; `orchestrator.compute_rollup`
   is the only rollup. User-Agent now uses `APP_VERSION`.
-- `tests/test_ui.py`: render/static/shortcut/a11y contract tests (no browser; no JS
-  behavior tests yet).
+- `tests/test_ui.py` contract tests and `tests/test_e2e_ui.py` Playwright tests.
+- Redesign: new design tokens (AA-checked palette, sans type), grouped nav rail, top bar
+  with command palette, composer with live type chips, empty-state guide, segmented
+  outcome filters, skeleton cards, compact density, Report export, connection banner,
+  composer drafts, auto-collapsed rail at tablet widths.
+- Fixed: phone layout (bottom nav covered the page), History/recent values were not
+  defanged, finished lookups could not be reopened after a restart, no theme flash.
 
 ## Known open items
-- No browser-level JS tests (only parse + contract checks).
+- Browser tests are skipped when Playwright/Chromium are missing.
+- `/graph`, `/providers`, `/ai`, `/maintain` inherit the new tokens but keep their old layouts.

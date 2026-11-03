@@ -10,11 +10,31 @@ per source** plus a short decision summary. It never blends sources into one sco
 pip install -r requirements.txt
 python3 run_local.py          # http://127.0.0.1:8080
 pytest -q
+
+# optional browser tests (palette, streaming, export, restart repaint, phone layout)
+pip install -r requirements-dev.txt && python3 -m playwright install chromium
 ```
 
 Colab / preview: `python3 run.py` or `bash startup.sh` bind `0.0.0.0:8080`.
 `osint.config.DEFAULT_HOST` is loopback (`127.0.0.1`); only those two entry points opt in
 to all interfaces. **Not safe for the public internet without access control.**
+
+## Using the desk
+
+| Key | Action |
+|---|---|
+| `/` | focus the input (or history search) |
+| `Ctrl/Cmd` + `Enter` | run the lookup |
+| `Ctrl/Cmd` + `K` | command palette: run an IOC, search history, jump to a page, export |
+| `?` | shortcut help |
+| `[` | collapse / expand navigation |
+| `1`..`6` | filter extracted IOCs by type |
+| `Esc` | close a dialog or modal |
+
+Also: live type chips while you paste, skeleton cards that hold each source's place as it
+streams in, a compact/comfortable density toggle, **Report** download (Markdown or JSON,
+always defanged, one section per source, no blended score), and a composer draft that
+survives a reload. Theme and density persist and apply before first paint.
 
 ## Configuration
 
