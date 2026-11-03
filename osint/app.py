@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 from pathlib import Path
 from typing import Any
@@ -272,11 +273,16 @@ def create_app() -> FastAPI:
     @app.get("/api/lookups/{lookup_id}/stream")
     async def api_stream(lookup_id: str) -> StreamingResponse:
         async def gen():
-            # Finished lookups the bus no longer knows (restart, freed buffer): the client
-            # loads results over HTTP, so end the stream instead of waiting forever.
-            if not BUS.has(lookup_id) and lookup_is_over(lookup_id):
-                yield "event: done\ndata: " + json.dumps({"lookup_id": lookup_id}) + "\n\n"
-                return
+            # A lookup the bus does not know is either about to publish (row just created),
+            # finished, or orphaned (server restarted mid-lookup, or unknown id). Never wait
+            # on it forever: end with 'done' so the client repaints from SQLite.
+            waited = 0.0
+            while not BUS.has(lookup_id):
+                if waited >= 30 or lookup_is_over(lookup_id, stale_after_s=15):
+                    yield "event: done\ndata: " + json.dumps({"lookup_id": lookup_id}) + "\n\n"
+                    return
+                await asyncio.sleep(0.25)
+                waited += 0.25
             async for event, payload in BUS.subscribe(lookup_id):
                 yield f"event: {event}\ndata: {payload}\n\n"
 

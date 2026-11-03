@@ -42,3 +42,16 @@ def test_unknown_lookup_is_not_treated_as_finished():
 
     assert lookup_is_over("does-not-exist") is False
     assert lookup_is_over(_lookup(finished=False)) is False
+
+
+def test_orphaned_unfinished_lookup_ends_instead_of_hanging():
+    """Server restarted mid-lookup: row exists, never finished, bus knows nothing."""
+    from osint.db import get_conn
+
+    client = TestClient(create_app())
+    lookup_id = _lookup(finished=False)
+    conn = get_conn()
+    conn.execute("UPDATE lookups SET started_at=? WHERE id=?", ("2020-01-01T00:00:00Z", lookup_id))
+    conn.commit()
+    r = client.get(f"/api/lookups/{lookup_id}/stream")
+    assert r.text.startswith("event: done\n")
