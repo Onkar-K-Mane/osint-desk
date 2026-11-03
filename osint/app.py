@@ -15,6 +15,7 @@ from markupsafe import escape
 
 from osint.config import APP_NAME, APP_VERSION, load_secrets, write_secret, has_key, ai_settings, public_ai_settings, save_ai_prefs
 from osint.db import (
+    lookup_is_over,
     forget_indicator,
     get_conn,
     graph_around,
@@ -34,6 +35,7 @@ from osint.db import (
     result_raw,
     row_to_result,
 )
+from osint.defang import defang_url_scheme
 from osint.detect import extract_indicators
 from osint.hunt import hunt_pack
 from osint.models import AnalystVerdict, LookupTrigger
@@ -66,6 +68,14 @@ def _short_dt(value: str | None) -> str:
 
 
 templates.env.filters["short_dt"] = _short_dt
+
+
+def defang_text(value: object) -> str:
+    """Display defang for templates; same output as defang() in app.js (hard rule 11)."""
+    return defang_url_scheme(str(value or ""))
+
+
+templates.env.filters["defang"] = defang_text
 
 
 def create_app() -> FastAPI:
@@ -262,6 +272,11 @@ def create_app() -> FastAPI:
     @app.get("/api/lookups/{lookup_id}/stream")
     async def api_stream(lookup_id: str) -> StreamingResponse:
         async def gen():
+            # Finished lookups the bus no longer knows (restart, freed buffer): the client
+            # loads results over HTTP, so end the stream instead of waiting forever.
+            if not BUS.has(lookup_id) and lookup_is_over(lookup_id):
+                yield "event: done\ndata: " + json.dumps({"lookup_id": lookup_id}) + "\n\n"
+                return
             async for event, payload in BUS.subscribe(lookup_id):
                 yield f"event: {event}\ndata: {payload}\n\n"
 

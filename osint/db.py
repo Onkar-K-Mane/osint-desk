@@ -6,7 +6,7 @@ import gzip
 import json
 import sqlite3
 import threading
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -261,6 +261,23 @@ def create_lookup(
         (lookup_id, indicator_id, iso(utcnow()), trigger, parent_lookup_id),
     )
     c.commit()
+
+
+def lookup_is_over(lookup_id: str, stale_after_s: int = 600) -> bool:
+    """True when a lookup row exists and can no longer produce live events: it finished,
+    or it started long ago and the process that ran it is gone."""
+    row = get_conn().execute("SELECT started_at, finished_at FROM lookups WHERE id=?", (lookup_id,)).fetchone()
+    if not row:
+        return False
+    if row["finished_at"]:
+        return True
+    try:
+        started = datetime.fromisoformat(str(row["started_at"]).replace("Z", "+00:00"))
+        if started.tzinfo is None:
+            started = started.replace(tzinfo=timezone.utc)
+        return (utcnow() - started).total_seconds() > stale_after_s
+    except ValueError:
+        return False
 
 
 def finish_lookup(lookup_id: str, conn: sqlite3.Connection | None = None) -> None:
