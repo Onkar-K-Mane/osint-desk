@@ -13,6 +13,7 @@ from urllib.parse import quote
 import httpx
 
 from osint.bus import BUS
+from osint.config import APP_VERSION
 from osint.db import (
     compress_raw,
     create_lookup,
@@ -65,7 +66,7 @@ def http_client() -> httpx.AsyncClient:
         _http = httpx.AsyncClient(
             follow_redirects=True,
             timeout=httpx.Timeout(20.0),
-            headers={"User-Agent": "OSINT-Desk/0.4 (personal-lab; local)"},
+            headers={"User-Agent": f"OSINT-Desk/{APP_VERSION} (personal-lab; local)"},
         )
     return _http
 

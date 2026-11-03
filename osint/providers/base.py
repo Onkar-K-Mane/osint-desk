@@ -17,12 +17,13 @@ from osint.models import (
     ResultStatus,
     utcnow,
 )
+from osint.config import APP_VERSION
 from osint.registry import SourceSpec
 from osint.ttl import parse_duration
 from osint.verdict import map_verdict
 
 PARSER_VERSION = 1
-USER_AGENT = "OSINT-Desk/0.4 (personal-lab; local)"
+USER_AGENT = f"OSINT-Desk/{APP_VERSION} (personal-lab; local)"
 
 
 class Ctx:
