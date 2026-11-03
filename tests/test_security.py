@@ -7,10 +7,30 @@ def test_bad_host_rejected():
     app = create_app()
     client = TestClient(app, raise_server_exceptions=False)
     r = client.get("/", headers={"Host": "evil.example:8080"})
-    # relaxed mode allows most hosts, but we still set security headers on allowed
-    # Force a clearly empty host
     r2 = client.get("/", headers={"Host": ""})
     assert r2.status_code in (421, 400, 200)
+    assert r.status_code in (421, 200)
+
+
+def test_strict_hosts(monkeypatch):
+    from osint import security
+
+    monkeypatch.setattr(security, "STRICT_HOSTS", True)
+    ok = ["127.0.0.1:8080", "localhost", "[::1]:8080", "a.localhost", "x.trycloudflare.com"]
+    bad = ["evil.example:8080", "127.0.0.1.evil.example", "", "[::2]:8080"]
+    assert all(security.host_allowed(h) for h in ok)
+    assert not any(security.host_allowed(h) for h in bad)
+    client = TestClient(create_app(), raise_server_exceptions=False)
+    assert client.get("/healthz", headers={"Host": "evil.example"}).status_code == 421
+    assert client.get("/healthz", headers={"Host": "localhost:8080"}).status_code == 200
+
+
+def test_relaxed_hosts_opt_out(monkeypatch):
+    from osint import security
+
+    monkeypatch.setattr(security, "STRICT_HOSTS", False)
+    assert security.host_allowed("anything.example")
+    assert not security.host_allowed("")
 
 
 def test_pages_escape_and_render():

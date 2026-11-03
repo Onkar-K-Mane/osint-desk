@@ -19,6 +19,7 @@ def main() -> None:
     load_secrets()
     # Colab / preview entry point: bind all interfaces unless OSINT_HOST says otherwise.
     host = os.environ.get("OSINT_HOST", "0.0.0.0")
+    os.environ.setdefault("OSINT_STRICT_HOSTS", "0")  # preview/Colab proxies use varied Host headers
     port = int(os.environ.get("OSINT_PORT", str(DEFAULT_PORT)))
     import uvicorn
 

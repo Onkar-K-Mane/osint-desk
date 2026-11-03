@@ -41,8 +41,9 @@ DB_PATH = DATA_DIR / "osint.sqlite3"
 SECRETS_PATH = DATA_DIR / "secrets.env"
 SESSION_SECRET_PATH = DATA_DIR / "session.secret"
 
-# Host header policy. Relaxed when bound on all interfaces (preview / Colab).
-STRICT_HOSTS = os.environ.get("OSINT_STRICT_HOSTS", "0") in {"1", "true", "yes"}
+# Host header policy. Strict by default: only localhost and known hosted-preview
+# suffixes (see osint.security). Set OSINT_STRICT_HOSTS=0 to accept any Host header.
+STRICT_HOSTS = os.environ.get("OSINT_STRICT_HOSTS", "1").lower() in {"1", "true", "yes"}
 
 
 def ensure_data_dir() -> None:
