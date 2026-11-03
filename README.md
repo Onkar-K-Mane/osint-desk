@@ -23,7 +23,7 @@ to all interfaces. **Not safe for the public internet without access control.**
 | `OSINT_HOST` | `127.0.0.1` (`0.0.0.0` via `run.py`/`startup.sh`) | bind address |
 | `OSINT_PORT` | `8080` | port |
 | `OSINT_DATA_DIR` | `data/app` | SQLite, `secrets.env`, `session.secret`, `ai.json` |
-| `OSINT_STRICT_HOSTS` | `0` | `1` rejects Host headers outside localhost |
+| `OSINT_STRICT_HOSTS` | `1` (`0` via `run.py`/`startup.sh`/Colab) | `1` accepts only localhost and known preview suffixes; `0` accepts any Host |
 
 API keys live in `<data dir>/secrets.env` (never in SQLite or `sources.yaml`).
 

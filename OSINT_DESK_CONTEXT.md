@@ -38,8 +38,9 @@ headers on all `/api/` writes; not for the public internet without access contro
 ## Runtime defaults
 - `DEFAULT_HOST` = `127.0.0.1` (`osint/config.py`). `run_local.py` also pins loopback.
   `run.py` and `startup.sh` explicitly bind `0.0.0.0` for Colab/preview.
-- `OSINT_STRICT_HOSTS` defaults to off (any Host header accepted). Turn it on when bound
-  beyond loopback behind a known hostname.
+- `OSINT_STRICT_HOSTS` defaults to on: Host/Origin must be localhost (`127.0.0.1`,
+  `[::1]`, `*.localhost`) or a known preview suffix (`RELAXED_SUFFIXES` in `security.py`).
+  `run.py`, `startup.sh` and the Colab notebook set it to `0` for proxy Host headers.
 - CSP: `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; ...`.
   No third-party scripts are loaded.
 
@@ -48,9 +49,13 @@ headers on all `/api/` writes; not for the public internet without access contro
 - CSP no longer allows `https://grok.com`; the `grok.com` script tag was removed from
   `base.html`.
 - Default bind host changed from `0.0.0.0` to `127.0.0.1`; Colab entry points opt in.
+- Strict Host checking on by default (also fixes bracketed IPv6 Host parsing).
+- SSE bus frees replay buffers of finished lookups (`FINISHED_TTL`, `MAX_FINISHED`);
+  late subscribers to a freed lookup get an immediate `done` and load results over HTTP.
+- Removed unused duplicate `verdict.rollup_from_results`; `orchestrator.compute_rollup`
+  is the only rollup. User-Agent now uses `APP_VERSION`.
+- `tests/test_ui.py`: render/static/shortcut/a11y contract tests (no browser; no JS
+  behavior tests yet).
 
 ## Known open items
-- `OSINT_STRICT_HOSTS` off by default.
-- Orchestrator User-Agent still says `OSINT-Desk/0.4`.
-- Duplicate rollup function in `verdict.py`; event-bus buffers never freed.
-- No JS/UI tests.
+- No browser-level JS tests (only parse + contract checks).
