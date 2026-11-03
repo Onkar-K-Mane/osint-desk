@@ -48,8 +48,9 @@ def test_bulk_redirects(client):
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node not installed")
-def test_app_js_parses():
-    out = subprocess.run(["node", "--check", str(STATIC / "js" / "app.js")], capture_output=True, text=True)
+@pytest.mark.parametrize("name", ["app.js", "ux.js", "boot.js"])
+def test_js_parses(name):
+    out = subprocess.run(["node", "--check", str(STATIC / "js" / name)], capture_output=True, text=True)
     assert out.returncode == 0, out.stderr
 
 
@@ -78,3 +79,43 @@ def test_css_accessibility_and_theming():
 def test_extracted_tray_hidden_by_default(client):
     # Hard rule 7: tray shown only when >1 IOC; markup must start hidden.
     assert 'id="extracted" class="extracted hidden"' in client.get("/").text
+
+
+def test_defang_filter_matches_client_rules():
+    from osint.app import defang_text
+
+    assert defang_text("http://evil.com/a") == "hxxp://evil[.]com/a"
+    assert defang_text("https://a.b") == "hxxps://a[.]b"
+    assert defang_text("bad@evil.com") == "bad[@]evil[.]com"
+    assert defang_text(None) == ""
+
+
+@pytest.mark.parametrize("path,label", [("/", "Investigate"), ("/history", "History"), ("/providers", "Providers")])
+def test_active_nav_item_has_aria_current(client, path, label):
+    html = client.get(path).text
+    assert re.findall(r'aria-label="([^"]+)" aria-current="page"', html) == [label]
+
+
+def test_topbar_controls_are_labelled(client):
+    html = client.get("/").text
+    for ident in ("cmdk-open", "density-toggle", "theme-toggle", "help-open"):
+        assert re.search(rf'id="{ident}"[^>]*aria-', html), ident
+    assert 'id="detect-chips"' in html and 'aria-live="polite"' in html
+
+
+def test_no_inline_scripts_so_csp_holds(client):
+    for path in PAGES:
+        # JSON data blocks are not executable; anything else without src= would break the CSP.
+        for tag in re.findall(r"<script(?![^>]*\bsrc=)[^>]*>", client.get(path).text):
+            assert 'type="application/json"' in tag, (path, tag)
+
+
+def test_theme_boot_script_loads_before_css(client):
+    html = client.get("/").text
+    assert html.index("/static/js/boot.js") < html.index("/static/css/app.css")
+
+
+def test_ux_layer_exposes_documented_features():
+    ux = (STATIC / "js" / "ux.js").read_text()
+    for needle in ("openPalette", "openHelp", "toggleDensity", "downloadReport", "osint:stream", "deepDefang"):
+        assert needle in ux, needle
